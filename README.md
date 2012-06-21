@@ -1,0 +1,4 @@
+pyqt-installer
+==============
+
+PyQt installer
