@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+SIP_LATEST_VERSION='sip-4.13.3.zip'
+SIP_DIR='sip-4.13.3'
+PYQT_LATEST_VERSION='PyQt-x11-gpl-4.9.2.tar.gz'
+PYQT_DIR='PyQt-x11-gpl-4.9.2'
+SIP_URL='http://www.riverbankcomputing.com/static/Downloads/sip4/'$SIP_LATEST_VERSION
+PYQT_URL='http://www.riverbankcomputing.com/static/Downloads/PyQt4/'$PYQT_LATEST_VERSION
+DOWNLOAD_PATH='/tmp/pyqt'
+
+function clean {
+  mkdir -p $DOWNLOAD_PATH;
+  rm -rf $DOWNLOAD_PATH/*
+}
+
+function get_sip {
+  curl -s $SIP_URL -o $SIP_LATEST_VERSION
+}
+function get_pyqt {
+  curl -s $PYQT_URL -o $PYQT_LATEST_VERSION
+}
+
+function build_sip {
+  unzip $SIP_LATEST_VERSION
+  pushd $SIP_DIR > /dev/null
+  $PYTHON configure.py -e $VIRTUAL_ENV/include && make && make install
+  popd > /dev/null
+}
+
+function build_pyqt {
+  tar xf $PYQT_LATEST_VERSION
+  pushd $PYQT_DIR > /dev/null
+  $PYTHON configure.py --confirm-license --no-designer-plugin --no-qsci-api && make && make install
+  popd > /dev/null
+}
+
+function init_envs {
+  source $(which virtualenvwrapper.sh)
+  if [ -z $1 ];
+  then
+      echo "Usage: install_pyqt.sh VIRTUALENV_NAME"
+      exit 1
+  fi
+  workon $1
+  pushd $DOWNLOAD_PATH > /dev/null
+  PYTHON=$VIRTUAL_ENV/bin/python
+}
+
+function cleanup {
+  if [ -z $VIRTUAL_ENV ];
+    then
+      deactivate
+  fi
+}
+
+clean && init_envs $1
+set -e
+(get_sip && build_sip && get_pyqt && build_pyqt && $PYTHON -c "import sip, PyQt4" && cleanup && echo "Install finished!") || (cleanup && echo "Install failed")
+popd > /dev/null
